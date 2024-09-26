@@ -1,34 +1,69 @@
-version: '3.7'
-services:
-  dind:
-    image: docker:dind
-    user: root
-    privileged: true
-    container_name: dind
-    expose:
-      - 2375
-    networks:
-      - jenkins_dind
-    environment:
-      DOCKER_TLS_CERTDIR: ""
+version: '3.7' 
+# Specifies the version of the Docker Compose file format being used (3.7 in this case).
 
-  jenkins:
-    image: jenkins/jenkins:lts
-    user: root
-    container_name: jenkins
-    depends_on:
-      - dind
-    ports:
-      - 8080:8080
-      - 50000:50000
-    volumes:
-      - ./jenkins:/var/jenkins_home
-      - /usr/bin/docker:/usr/bin/docker
-    environment:
-      DOCKER_HOST: "tcp://dind:2375"
+services:
+  dind: 
+    image: docker:dind 
+    # Uses the 'docker:dind' (Docker-in-Docker) image, which allows Docker to run inside a container.
+    
+    user: root 
+    # The container runs as the root user, which is required to run Docker commands inside the container.
+    
+    privileged: true 
+    # Grants extended privileges to the container, enabling Docker to function correctly (especially when mounting /dev or similar).
+    
+    container_name: dind 
+    # Names the container 'dind' instead of generating a random name.
+    
+    expose: 
+      - 2375 
+    # Exposes port 2375 inside the container for communication over the Docker socket (Docker API endpoint).
+    
     networks:
-      - jenkins_dind
+      - jenkins_dind 
+    # The 'dind' container is part of the 'jenkins_dind' network, which is shared with the 'jenkins' service.
+    
+    environment:
+      DOCKER_TLS_CERTDIR: "" 
+      # Disables TLS for the Docker daemon inside this container, allowing it to communicate without certificate-based authentication.
+
+  jenkins: 
+    image: jenkins/jenkins:lts 
+    # Uses the latest Long-Term Support (LTS) version of the Jenkins image.
+    
+    user: root 
+    # Runs the Jenkins container as the root user to ensure proper permissions for interacting with Docker.
+    
+    container_name: jenkins 
+    # Names the container 'jenkins' for easy identification.
+    
+    depends_on:
+      - dind 
+    # Ensures that the 'dind' service starts before the 'jenkins' service, as Jenkins depends on Docker functionality.
+    
+    ports:
+      - 8080:8080 
+      # Maps Jenkins' web interface port (8080) from the container to the host, allowing access via localhost:8080.
+      
+      - 50000:50000 
+      # Maps Jenkins' agent communication port to the host, enabling Jenkins to communicate with its agents.
+      
+    volumes:
+      - ./jenkins:/var/jenkins_home 
+      # Mounts the 'jenkins' folder from the host to the Jenkins home directory, persisting Jenkins data (such as configurations and jobs).
+      
+      - /usr/bin/docker:/usr/bin/docker 
+      # Binds the Docker binary from the host into the container, allowing Jenkins to access the Docker CLI to manage containers.
+      
+    environment:
+      DOCKER_HOST: "tcp://dind:2375" 
+      # Sets the Docker host to point to the Docker-in-Docker service, enabling Jenkins to run Docker commands in the 'dind' container via TCP.
+    
+    networks:
+      - jenkins_dind 
+    # The 'jenkins' container is part of the 'jenkins_dind' network, allowing it to communicate with the 'dind' container.
 
 networks:
   jenkins_dind:
-    driver: bridge
+    driver: bridge 
+    # Defines a custom bridge network called 'jenkins_dind', allowing the 'jenkins' and 'dind' services to communicate with each other.
